@@ -23,7 +23,7 @@ O sistema permite que docentes realizem a autenticação na plataforma, gerencie
     * docker compose version
 
 2. Clonar o repositório
-    * git clone https://github.com/Wendell2509/fiap-fullstack-techchallenge-fase3
+    * git clone https://github.com/Wendell2509/fiap-fullstack-techchallenge-fase3.git
   
 3.  Entrar na pasta do projeto
     * cd fiap-fullstack-techchallenge-fase3
