@@ -14,46 +14,6 @@ O sistema permite que docentes realizem a autenticação na plataforma, gerencie
 - **DevOps:** Docker & Docker Compose
 - **Qualidade & Testes:** Testes automatizados e rotas de Health Check
 
-## Status
-
-Projeto completo
-
-## 16/06
-- Ambiente limpo validado com docker compose up --build.
-- Rotas testadas:
-    - GET /health
-    - GET /database/health
-- Containers:
-    - fiap-api
-    - fiap-db
- 
-## 23/06
-- Criação tabela de POST
-- CRUD completo (Post, Get, GetById, Put, Delete)
-- Teste usando Postman
-
-## 24/06
-- CRUD (Search)
-
-## 02/07
-- Testes Automatizados:
-    - GET /health
-
-## 06/07
-- Workflow Criado
-- Pipeline básico executado
-
-## 10/07
-- Testes Automatizados:
-    - POST /posts
-    - PUT /posts
-    - DELETE /posts
-    - GET /posts
-- Cobertura mínima de testes verificada
-
-## 12/09
-- Implementação do front-end
-
 ## Instruções
 1. Instalar os programas necessarios (comandos para verificar)
     * git --version
