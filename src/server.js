@@ -1,40 +1,43 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+const postRoutes = require('./routes/postRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const databaseRoutes = require('./routes/databaseRoutes');
-const postRoutes = require('./routes/postRoutes');
+const { initDatabase } = require('./config/database');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 
-app.get('/', (req, res) => {
-    res.json({
-        message: 'API do Tech Challenge - Blogging Educacional',
-    });
-});
-
-app.use(healthRoutes);
-app.use(databaseRoutes);
-app.use(postRoutes);
-
-// Rota de login com validação fixa
+// Rota de Login gerando JWT
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
 
-    if (email === 'professor@fiap.com' && password === '123456') {
-        return res.json({
-            token: 'jwt-token-valido-123',
-            user: { id: 1, name: 'Professor FIAP', email }
-        });
+    if (email === 'admin@fiap.com.br' && password === '123456') {
+        const token = jwt.sign(
+            { id: 1, email },
+            process.env.JWT_SECRET || 'secret_key_default',
+            { expiresIn: '1h' }
+        );
+        return res.json({ token });
     }
 
-    return res.status(401).json({ error: 'E-mail ou senha inválidos.' });
+    return res.status(401).json({ error: 'Credenciais inválidas' });
 });
 
-app.listen(port, () => {
-    console.log(`Servidor rodando na porta ${port}`);
-});
+app.use('/', postRoutes);
+app.use('/', healthRoutes);
+app.use('/', databaseRoutes);
+
+initDatabase()
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(`Servidor rodando na porta ${PORT}`);
+        });
+    })
+    .catch((err) => {
+        console.error('Erro ao inicializar o banco de dados:', err);
+    });

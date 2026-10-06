@@ -1,11 +1,11 @@
 //IMPORTA CONEXAO COM O BANCO
-const pool = require('../config/database');
+const { pool } = require('../config/database');
 
 class PostRepository {
 
     //METODO PARA SALVAR UM POST NO POSTGRESQL
     async create({ title, content, author }) {
-        console.log("arg:",{ title,content,author}); //debug
+        console.log("arg:", { title, content, author }); //debug
         const queryText = `
             INSERT INTO posts(title,content,author)
             VALUES($1,$2,$3)
@@ -36,8 +36,6 @@ class PostRepository {
         const result = await pool.query(query, [searchTerm]);
         return result.rows;
     }
-
-    
 
     //METODO DE BUSCA POR ID UNICO
     async findById(id) {

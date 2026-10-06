@@ -8,7 +8,7 @@ const pool = new Pool({
     port: process.env.DB_PORT,
 });
 
-// 23/06 w CRIA TABELA SE ELA NAO EXISTIR
+// CRIA TABELA SE ELA NÃO EXISTIR
 async function initDatabase(retries = 5, delay = 2000) {
     const queryText = `
     CREATE TABLE IF NOT EXISTS posts (
@@ -25,7 +25,7 @@ async function initDatabase(retries = 5, delay = 2000) {
         try {
             await pool.query(queryText);
             console.log('Tabela "posts" verificada/criada com sucesso!');
-            return; 
+            return;
         } catch (error) {
             if (error.code === 'ECONNREFUSED' && i < retries) {
                 console.log(`⏳ Banco de dados inicializando. Tentativa ${i}/${retries} falhou. Aguardando ${delay / 1000}s...`);
@@ -38,7 +38,7 @@ async function initDatabase(retries = 5, delay = 2000) {
     }
 }
 
-//METODO PARA BUSCAR
+// MÉTODO PARA BUSCAR
 async function searchPosts(term) {
     const query = `
         SELECT * FROM posts 
@@ -50,7 +50,8 @@ async function searchPosts(term) {
     return result.rows;
 }
 
-//EXECUTA A INICIALIZACAO
-initDatabase();
-
-module.exports = pool;
+module.exports = {
+    pool,
+    initDatabase,
+    searchPosts
+};

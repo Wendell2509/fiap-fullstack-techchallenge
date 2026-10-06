@@ -3,14 +3,14 @@
     "",
     "\\frontend",
     "\\frontend\\src",
-    "\\frontend\\src\\components",
-    "\\frontend\\src\\context",
     "\\frontend\\src\\pages",
+    "\\frontend\\src\\services",
+    "\\frontend\\src\\styles",
+    "\\middlewares",
     "\\src",
-    "\\src\\controllers",
-    "\\src\\repositories",
-    "\\src\\routes"
+    "\\src\\config",
+    "\\src\\repositories"
   ],
-  "SelectedNode": "\\frontend\\src\\pages\\Home.jsx",
+  "SelectedNode": "\\frontend\\src\\context\\AuthContext.jsx",
   "PreviewInSolutionExplorer": false
 }
