@@ -25,4 +25,22 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
-module.exports = authMiddleware;
+// NOVO: Middleware para validar se o usuário possui o perfil necessário
+const authorizeRole = (...allowedRoles) => {
+    return (req, res, next) => {
+        if (!req.user || !req.user.role) {
+            return res.status(403).json({ message: 'Acesso negado. Perfil de usuário não informado.' });
+        }
+
+        if (!allowedRoles.includes(req.user.role)) {
+            return res.status(403).json({ message: 'Acesso negado. Permissão insuficiente.' });
+        }
+
+        return next();
+    };
+};
+
+module.exports = {
+    authMiddleware,
+    authorizeRole
+};

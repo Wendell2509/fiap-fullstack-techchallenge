@@ -1,4 +1,4 @@
-const pool = require('../config/database');
+const { pool } = require('../config/database');
 
 async function checkDatabaseConnection(req, res) {
   try {
@@ -10,10 +10,12 @@ async function checkDatabaseConnection(req, res) {
       databaseTime: result.rows[0].now,
     });
   } catch (error) {
-    return res.status(500).json({
-      status: 'error',
-      message: 'Erro ao conectar no banco de dados',
-    });
+      console.error('Erro ao testar conexão com o banco:', error);
+
+      return res.status(500).json({
+          status: 'error',
+          message: 'Erro ao conectar no banco de dados',
+      });
   }
 }
 

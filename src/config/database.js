@@ -1,16 +1,51 @@
+const path = require('path');
+// Carrega explicitamente o arquivo .env da raiz do projeto
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+
 const { Pool } = require('pg');
 
 const pool = new Pool({
-    user: process.env.DB_USER,
-    host: process.env.DB_HOST,
-    database: process.env.DB_NAME,
-    password: process.env.DB_PASSWORD,
-    port: process.env.DB_PORT,
+    user: process.env.DB_USER || 'admin_fiap',
+    host: process.env.DB_HOST || 'localhost',
+    database: process.env.DB_NAME || 'fiap_blog',
+    password: String(process.env.DB_PASSWORD || 'senha_fiap_2026'),
+    port: Number(process.env.DB_PORT) || 5432,
 });
 
-// CRIA TABELA SE ELA NÃO EXISTIR
+// CRIA AS TABELAS SE ELAS NÃO EXISTIREM
 async function initDatabase(retries = 5, delay = 2000) {
     const queryText = `
+    -- 1. Tabela de Usuários com a Role (teacher ou student)
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      role VARCHAR(20) NOT NULL CHECK (role IN ('teacher', 'student')),
+      "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 2. Tabela de Professores
+    CREATE TABLE IF NOT EXISTS teachers (
+      id SERIAL PRIMARY KEY,
+      user_id INT UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      department VARCHAR(100),
+      "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 3. Tabela de Estudantes
+    CREATE TABLE IF NOT EXISTS students (
+      id SERIAL PRIMARY KEY,
+      user_id INT UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      registration_number VARCHAR(50) UNIQUE NOT NULL,
+      "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 4. Tabela de Posts
     CREATE TABLE IF NOT EXISTS posts (
       id SERIAL PRIMARY KEY,
       title VARCHAR(255) NOT NULL,
@@ -24,14 +59,14 @@ async function initDatabase(retries = 5, delay = 2000) {
     for (let i = 1; i <= retries; i++) {
         try {
             await pool.query(queryText);
-            console.log('Tabela "posts" verificada/criada com sucesso!');
+            console.log('Tabelas verificadas/criadas com sucesso!');
             return;
         } catch (error) {
             if (error.code === 'ECONNREFUSED' && i < retries) {
-                console.log(`⏳ Banco de dados inicializando. Tentativa ${i}/${retries} falhou. Aguardando ${delay / 1000}s...`);
+                console.log(`Banco de dados inicializando. Tentativa ${i}/${retries} falhou. Aguardando ${delay / 1000}s...`);
                 await new Promise(res => setTimeout(res, delay));
             } else {
-                console.error(' Erro fatal ao criar a tabela "posts":');
+                console.error('Erro fatal ao criar as tabelas no banco:');
                 throw error;
             }
         }
