@@ -1,24 +1,14 @@
-
-import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
+import CreatePostScreen from '../screens/posts/CreatePostScreen';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useAuth } from '../contexts/AuthContext';
 import LoginScreen from '../screens/auth/LoginScreen';
+import PostsScreen from '../screens/posts/PostsScreen';
+import PostDetailScreen from '../screens/posts/PostDetailScreen';
 
 const Stack = createNativeStackNavigator();
-
-function HomeScreen() {
-    const { user, signOut } = useAuth();
-
-    return (
-        <View style={styles.container}>
-            <Text style={styles.title}>FIAP Blog</Text>
-            <Text>Bem-vindo, {user?.name}!</Text>
-            <Text>Perfil: {user?.role}</Text>
-        </View>
-    );
-}
 
 export default function AppNavigator() {
     const { user, loading } = useAuth();
@@ -35,11 +25,24 @@ export default function AppNavigator() {
         <NavigationContainer>
             <Stack.Navigator>
                 {user ? (
-                    <Stack.Screen
-                        name="Home"
-                        component={HomeScreen}
-                        options={{ title: 'FIAP Blog' }}
-                    />
+                    <>
+                        <Stack.Screen
+                            name="Posts"
+                            component={PostsScreen}
+                            options={{ title: 'FIAP Blog' }}
+                        />
+
+                        <Stack.Screen
+                            name="PostDetail"
+                            component={PostDetailScreen}
+                            options={{ title: 'Detalhes do Post' }}
+                        />
+                        <Stack.Screen
+                            name="CreatePost"
+                            component={CreatePostScreen}
+                            options={{ title: 'Criar Post' }}
+                        />
+                    </>
                 ) : (
                     <Stack.Screen
                         name="Login"
@@ -60,15 +63,5 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 12,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
     },
 });
