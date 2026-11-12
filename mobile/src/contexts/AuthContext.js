@@ -1,6 +1,8 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import { jwtDecode } from 'jwt-decode';
+
 import { login as loginService } from '../services/authService';
 
 const AuthContext = createContext(null);
@@ -16,15 +18,39 @@ export function AuthProvider({ children }) {
                 const savedToken = await SecureStore.getItemAsync('token');
                 const savedUser = await SecureStore.getItemAsync('user');
 
-                if (savedToken && savedUser) {
-                    setToken(savedToken);
-                    setUser(JSON.parse(savedUser));
+                if (!savedToken || !savedUser) {
+                    await clearStoredSession();
+                    return;
                 }
+
+                const decodedToken = jwtDecode(savedToken);
+
+                // Verifica se o token possui data de expiração
+                // e se ela já passou.
+                if (
+                    !decodedToken.exp ||
+                    decodedToken.exp * 1000 <= Date.now()
+                ) {
+                    await clearStoredSession();
+                    return;
+                }
+
+                const parsedUser = JSON.parse(savedUser);
+
+                setToken(savedToken);
+                setUser(parsedUser);
+
             } catch (error) {
                 console.error('Erro ao recuperar sessão:', error);
+                await clearStoredSession();
             } finally {
                 setLoading(false);
             }
+        }
+
+        async function clearStoredSession() {
+            await SecureStore.deleteItemAsync('token');
+            await SecureStore.deleteItemAsync('user');
         }
 
         loadSession();

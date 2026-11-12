@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
@@ -10,8 +11,10 @@ import {
     FlatList,
     ActivityIndicator,
     StyleSheet,
+    Alert,
 } from 'react-native';
 
+import { Feather } from '@expo/vector-icons';
 import { apiRequest } from '../../services/api';
 
 export default function PostsScreen() {
@@ -19,8 +22,17 @@ export default function PostsScreen() {
     const [term, setTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
     const navigation = useNavigation();
-    const { user } = useAuth();
+    const { user, token, signOut } = useAuth();
+
+    async function handleLogout() {
+        try {
+            await signOut();
+        } catch (err) {
+            Alert.alert('Erro', 'Não foi possível sair da conta.');
+        }
+    }
 
     async function loadPosts(searchTerm = '') {
         try {
@@ -56,34 +68,113 @@ export default function PostsScreen() {
         loadPosts('');
     }
 
+    function handleDeletePost(postId) {
+        Alert.alert(
+            'Excluir Post',
+            'Tem certeza de que deseja excluir este post? Essa ação não poderá ser desfeita.',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: () => confirmDelete(postId),
+                },
+            ]
+        );
+    }
+
+    async function confirmDelete(postId) {
+        try {
+            await apiRequest(
+                `/posts/${postId}`,
+                { method: 'DELETE' },
+                token
+            );
+
+            Alert.alert('Sucesso', 'Post excluído com sucesso!');
+            loadPosts(term);
+        } catch (err) {
+            Alert.alert('Erro', err.message || 'Não foi possível excluir o post.');
+        }
+    }
+
     function renderPost({ item }) {
         return (
-            <TouchableOpacity
-                style={styles.postCard}
-                onPress={() =>
-                    navigation.navigate('PostDetail', {
-                        postId: item.id,
-                    })
-                }
-            >
-                <Text style={styles.postTitle}>{item.title}</Text>
-                <Text style={styles.author}>Por: {item.author}</Text>
-                <Text style={styles.content}>{item.content}</Text>
-            </TouchableOpacity>
+            <View style={styles.postCard}>
+                <TouchableOpacity
+                    style={styles.postInfo}
+                    onPress={() =>
+                        navigation.navigate('PostDetail', { postId: item.id })
+                    }
+                >
+                    <Text style={styles.postTitle}>{item.title}</Text>
+                    <Text style={styles.author}>Por: {item.author}</Text>
+                    <Text style={styles.content}>{item.content}</Text>
+                </TouchableOpacity>
+
+                {user?.role === 'teacher' && (
+                    <View style={styles.adminButtons}>
+                        <TouchableOpacity
+                            style={styles.editIconButton}
+                            onPress={() =>
+                                navigation.navigate('EditPost', {
+                                    postId: item.id,
+                                })
+                            }
+                            accessibilityLabel="Editar post"
+                        >
+                            <Feather name="edit-2" size={20} color="#2455a4" />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.deleteIconButton}
+                            onPress={() => handleDeletePost(item.id)}
+                            accessibilityLabel="Excluir post"
+                        >
+                            <Feather name="trash-2" size={20} color="#d32f2f" />
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </View>
         );
     }
 
     return (
         <View style={styles.container}>
-            <Text style={styles.heading}>Posts</Text>
+            <View style={styles.header}>
+                <Text style={styles.heading}>Posts</Text>
+                <TouchableOpacity
+                    style={styles.logoutButton}
+                    onPress={handleLogout}
+                    accessibilityLabel="Sair da conta"
+                >
+                    <Feather name="log-out" size={23} color="#2455a4" />
+                </TouchableOpacity>
+            </View>
 
             {user?.role === 'teacher' && (
-                <TouchableOpacity
-                    style={styles.createButton}
-                    onPress={() => navigation.navigate('CreatePost')}
-                >
-                    <Text style={styles.buttonText}>+ Novo Post</Text>
-                </TouchableOpacity>
+                <>
+                    <TouchableOpacity
+                        style={styles.createButton}
+                        onPress={() => navigation.navigate('CreatePost')}
+                    >
+                        <Text style={styles.buttonText}>+ Novo Post</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.teachersButton}
+                        onPress={() => navigation.navigate('Teachers')}
+                    >
+                        <Text style={styles.buttonText}>Professores</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.studentsButton}
+                        onPress={() => navigation.navigate('Students')}
+                    >
+                        <Text style={styles.buttonText}>Alunos</Text>
+                    </TouchableOpacity>
+                </>
             )}
 
             <View style={styles.searchContainer}>
@@ -125,9 +216,7 @@ export default function PostsScreen() {
                     renderItem={renderPost}
                     contentContainerStyle={styles.list}
                     ListEmptyComponent={
-                        <Text style={styles.empty}>
-                            Nenhum post encontrado.
-                        </Text>
+                        <Text style={styles.empty}>Nenhum post encontrado.</Text>
                     }
                 />
             )}
@@ -141,11 +230,19 @@ const styles = StyleSheet.create({
         backgroundColor: '#f5f5f5',
         padding: 16,
     },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
     heading: {
         fontSize: 26,
         fontWeight: 'bold',
-        marginBottom: 16,
         color: '#222',
+    },
+    logoutButton: {
+        padding: 8,
     },
     searchContainer: {
         flexDirection: 'row',
@@ -178,12 +275,17 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
     },
     postCard: {
+        flexDirection: 'row',
         backgroundColor: '#fff',
         padding: 16,
         borderRadius: 8,
         marginBottom: 12,
         borderWidth: 1,
         borderColor: '#e5e5e5',
+        alignItems: 'center',
+    },
+    postInfo: {
+        flex: 1,
     },
     postTitle: {
         fontSize: 18,
@@ -201,6 +303,22 @@ const styles = StyleSheet.create({
         color: '#444',
         lineHeight: 22,
     },
+    adminButtons: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 12,
+        gap: 16,
+    },
+    editIconButton: {
+        padding: 8,
+        backgroundColor: '#edf2fa',
+        borderRadius: 8,
+    },
+    deleteIconButton: {
+        padding: 8,
+        backgroundColor: '#fff0f0',
+        borderRadius: 8,
+    },
     loader: {
         marginTop: 30,
     },
@@ -216,6 +334,20 @@ const styles = StyleSheet.create({
     },
     createButton: {
         backgroundColor: '#2455a4',
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    teachersButton: {
+        backgroundColor: '#555',
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    studentsButton: {
+        backgroundColor: '#287a55',
         padding: 12,
         borderRadius: 8,
         alignItems: 'center',

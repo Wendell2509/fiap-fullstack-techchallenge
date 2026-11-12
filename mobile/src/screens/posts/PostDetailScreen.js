@@ -6,15 +6,20 @@ import {
     ActivityIndicator,
     StyleSheet,
     ScrollView,
+    TouchableOpacity,
+    Alert,
 } from 'react-native';
 
 import { apiRequest } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
-export default function PostDetailScreen({ route }) {
+export default function PostDetailScreen({ route, navigation }) {
     const { postId } = route.params;
+    const { user, token } = useAuth();
 
     const [post, setPost] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [deleting, setDeleting] = useState(false);
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -34,6 +39,56 @@ export default function PostDetailScreen({ route }) {
 
         loadPost();
     }, [postId]);
+
+    function handleDeletePost() {
+        Alert.alert(
+            'Excluir Post',
+            'Tem certeza de que deseja excluir este post? Essa ação não poderá ser desfeita.',
+            [
+                {
+                    text: 'Cancelar',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: confirmDelete,
+                },
+            ]
+        );
+    }
+
+    async function confirmDelete() {
+        try {
+            setDeleting(true);
+
+            await apiRequest(
+                `/posts/${postId}`,
+                {
+                    method: 'DELETE',
+                },
+                token
+            );
+
+            Alert.alert(
+                'Sucesso',
+                'Post excluído com sucesso!',
+                [
+                    {
+                        text: 'OK',
+                        onPress: () => navigation.goBack(),
+                    },
+                ]
+            );
+        } catch (err) {
+            Alert.alert(
+                'Erro',
+                err.message || 'Não foi possível excluir o post.'
+            );
+        } finally {
+            setDeleting(false);
+        }
+    }
 
     if (loading) {
         return (
@@ -64,6 +119,37 @@ export default function PostDetailScreen({ route }) {
             <Text style={styles.content}>
                 {post.content}
             </Text>
+
+            {user?.role === 'teacher' && (
+                <>
+                    <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() =>
+                            navigation.navigate('EditPost', {
+                                postId: post.id,
+                            })
+                        }
+                    >
+                        <Text style={styles.buttonText}>
+                            Editar Post
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={handleDeletePost}
+                        disabled={deleting}
+                    >
+                        {deleting ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.buttonText}>
+                                Excluir Post
+                            </Text>
+                        )}
+                    </TouchableOpacity>
+                </>
+            )}
         </ScrollView>
     );
 }
@@ -99,5 +185,24 @@ const styles = StyleSheet.create({
     error: {
         color: '#d32f2f',
         textAlign: 'center',
+    },
+    editButton: {
+        backgroundColor: '#2455a4',
+        padding: 14,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 24,
+    },
+    deleteButton: {
+        backgroundColor: '#d32f2f',
+        padding: 14,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 12,
+        marginBottom: 24,
+    },
+    buttonText: {
+        color: '#fff',
+        fontWeight: 'bold',
     },
 });
