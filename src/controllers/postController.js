@@ -1,83 +1,173 @@
+
 const postRepository = require('../repositories/postRepository');
-//const { searchPosts } = require('../repositories/postRepository');
 
 class PostController {
-    //POST
+
+    // CRIAR POST
     async create(req, res) {
         try {
-            console.log("reqbody:", req.body); //debug
             const { title, content, author } = req.body;
+
             if (!title || !content || !author) {
-                return res.status(400).json({ error: 'Campos obrigatórios ausentes: title, content e author.' });
+                return res.status(400).json({
+                    error: 'Campos obrigatórios ausentes: title, content e author.'
+                });
             }
-            const newPost = await postRepository.create({ title, content, author });
+
+            const newPost = await postRepository.create({
+                title,
+                content,
+                author
+            });
+
             return res.status(201).json(newPost);
         } catch (error) {
-            console.error(error);
-            return res.status(500).json({ error: 'Erro ao criar post.' });
+            console.error('Erro ao criar post:', error);
+            return res.status(500).json({
+                error: 'Erro ao criar post.'
+            });
         }
     }
 
-    // GET
+    // LISTAR POSTS COM PAGINAÇÃO
     async list(req, res) {
         try {
-            const posts = await postRepository.findAll();
-            return res.status(200).json(posts);
+            const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+            const limit = Math.min(
+                50,
+                Math.max(1, parseInt(req.query.limit, 10) || 10)
+            );
+
+            const offset = (page - 1) * limit;
+
+            const posts = await postRepository.findAll(limit, offset);
+            const total = await postRepository.countAll();
+
+            return res.status(200).json({
+                data: posts,
+                meta: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit)
+                }
+            });
         } catch (error) {
-            return res.status(500).json({ error: 'Erro ao listar posts.' });
+            console.error('Erro ao listar posts:', error);
+            return res.status(500).json({
+                error: 'Erro ao listar posts.'
+            });
         }
     }
 
-    //GET BY KEY-WORD
+    // PESQUISAR POSTS COM PAGINAÇÃO
     async search(req, res) {
-        const { term } = req.query;
-
-        if (!term) {
-            return res.status(400).json({ error: "O termo de busca é obrigatório." });
-        }
-
         try {
-            const posts = await postRepository.searchPosts(term);
-            res.json(posts);
+            const { term } = req.query;
+
+            if (!term || !term.trim()) {
+                return res.status(400).json({
+                    error: 'O termo de busca é obrigatório.'
+                });
+            }
+
+            const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+            const limit = Math.min(
+                50,
+                Math.max(1, parseInt(req.query.limit, 10) || 10)
+            );
+
+            const offset = (page - 1) * limit;
+
+            const posts = await postRepository.searchPosts(
+                term.trim(),
+                limit,
+                offset
+            );
+
+            const total = await postRepository.countSearch(term.trim());
+
+            return res.status(200).json({
+                data: posts,
+                meta: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit)
+                }
+            });
         } catch (error) {
-            console.error("Erro ao buscar posts:", error);
-            res.status(500).json({ error: error.message, stack: error.stack });
+            console.error('Erro ao buscar posts:', error);
+            return res.status(500).json({
+                error: 'Erro ao buscar posts.'
+            });
         }
     }
 
-    // GET by ID
+    // BUSCAR POST POR ID
     async getById(req, res) {
         try {
             const post = await postRepository.findById(req.params.id);
-            if (!post) return res.status(404).json({ error: 'Post não encontrado.' });
+
+            if (!post) {
+                return res.status(404).json({
+                    error: 'Post não encontrado.'
+                });
+            }
+
             return res.status(200).json(post);
         } catch (error) {
-            return res.status(500).json({ error: 'Erro ao buscar post.' });
+            console.error('Erro ao buscar post:', error);
+            return res.status(500).json({
+                error: 'Erro ao buscar post.'
+            });
         }
     }
 
-    
-
-    // PUT 
+    // ATUALIZAR POST
     async update(req, res) {
         try {
             const { title, content, author } = req.body;
-            const updated = await postRepository.update(req.params.id, { title, content, author });
-            if (!updated) return res.status(404).json({ error: 'Post não encontrado.' });
+
+            const updated = await postRepository.update(
+                req.params.id,
+                { title, content, author }
+            );
+
+            if (!updated) {
+                return res.status(404).json({
+                    error: 'Post não encontrado.'
+                });
+            }
+
             return res.status(200).json(updated);
         } catch (error) {
-            return res.status(500).json({ error: 'Erro ao atualizar post.' });
+            console.error('Erro ao atualizar post:', error);
+            return res.status(500).json({
+                error: 'Erro ao atualizar post.'
+            });
         }
     }
 
-    // DELETE 
+    // EXCLUIR POST
     async delete(req, res) {
         try {
             const success = await postRepository.delete(req.params.id);
-            if (!success) return res.status(404).json({ error: 'Post não encontrado.' });
-            return res.status(200).json({ message: 'Post deletado com sucesso.' });
+
+            if (!success) {
+                return res.status(404).json({
+                    error: 'Post não encontrado.'
+                });
+            }
+
+            return res.status(200).json({
+                message: 'Post deletado com sucesso.'
+            });
         } catch (error) {
-            return res.status(500).json({ error: 'Erro ao deletar post.' });
+            console.error('Erro ao deletar post:', error);
+            return res.status(500).json({
+                error: 'Erro ao deletar post.'
+            });
         }
     }
 }

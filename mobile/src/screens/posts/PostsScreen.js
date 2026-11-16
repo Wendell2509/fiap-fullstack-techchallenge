@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -22,9 +22,15 @@ export default function PostsScreen() {
     const [term, setTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [total, setTotal] = useState(0);
 
     const navigation = useNavigation();
     const { user, token, signOut } = useAuth();
+
+    const pageRef = useRef(1);
+    const termRef = useRef('');
 
     async function handleLogout() {
         try {
@@ -34,18 +40,27 @@ export default function PostsScreen() {
         }
     }
 
-    async function loadPosts(searchTerm = '') {
+    async function loadPosts(searchTerm = '', pageToLoad = 1) {
         try {
             setLoading(true);
             setError('');
 
-            const endpoint = searchTerm.trim()
-                ? `/posts/search?term=${encodeURIComponent(searchTerm.trim())}`
-                : '/posts';
+            const currentPage = Math.max(1, pageToLoad);
+            const search = searchTerm.trim();
 
-            const data = await apiRequest(endpoint);
+            const endpoint = search
+                ? `/posts/search?term=${encodeURIComponent(search)}&page=${currentPage}&limit=10`
+                : `/posts?page=${currentPage}&limit=10`;
 
-            setPosts(data);
+            const response = await apiRequest(endpoint);
+
+            setPosts(response.data);
+            setPage(response.meta.page);
+            setTotalPages(response.meta.totalPages);
+            setTotal(response.meta.total);
+
+            pageRef.current = response.meta.page;
+            termRef.current = searchTerm;
         } catch (err) {
             setError(err.message || 'Erro ao carregar posts.');
         } finally {
@@ -55,17 +70,33 @@ export default function PostsScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            loadPosts(term);
-        }, [term])
+            loadPosts(termRef.current, pageRef.current);
+        }, [])
     );
 
     function handleSearch() {
-        loadPosts(term);
+        termRef.current = term;
+        pageRef.current = 1;
+        loadPosts(term, 1);
     }
 
     function handleClear() {
         setTerm('');
-        loadPosts('');
+        termRef.current = '';
+        pageRef.current = 1;
+        loadPosts('', 1);
+    }
+
+    function handlePreviousPage() {
+        if (page > 1) {
+            loadPosts(termRef.current, page - 1);
+        }
+    }
+
+    function handleNextPage() {
+        if (page < totalPages) {
+            loadPosts(termRef.current, page + 1);
+        }
     }
 
     function handleDeletePost(postId) {
@@ -92,7 +123,17 @@ export default function PostsScreen() {
             );
 
             Alert.alert('Sucesso', 'Post excluído com sucesso!');
-            loadPosts(term);
+
+            const nextTotal = total - 1;
+            const nextTotalPages = Math.max(1, Math.ceil(nextTotal / 10));
+
+            const pageToLoad =
+                posts.length === 1 && page > nextTotalPages
+                    ? Math.max(1, page - 1)
+                    : page;
+
+            pageRef.current = pageToLoad;
+            loadPosts(termRef.current, pageToLoad);
         } catch (err) {
             Alert.alert('Erro', err.message || 'Não foi possível excluir o post.');
         }
@@ -210,15 +251,59 @@ export default function PostsScreen() {
             ) : error ? (
                 <Text style={styles.error}>{error}</Text>
             ) : (
-                <FlatList
-                    data={posts}
-                    keyExtractor={(item) => String(item.id)}
-                    renderItem={renderPost}
-                    contentContainerStyle={styles.list}
-                    ListEmptyComponent={
-                        <Text style={styles.empty}>Nenhum post encontrado.</Text>
-                    }
-                />
+                <>
+                    <FlatList
+                        data={posts}
+                        keyExtractor={(item) => String(item.id)}
+                        renderItem={renderPost}
+                        contentContainerStyle={styles.list}
+                        ListEmptyComponent={
+                            <Text style={styles.empty}>
+                                Nenhum post encontrado.
+                            </Text>
+                        }
+                    />
+
+                    {total > 0 && (
+                        <View style={styles.pagination}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.pageButton,
+                                    page <= 1 && styles.disabledButton,
+                                ]}
+                                onPress={handlePreviousPage}
+                                disabled={page <= 1}
+                            >
+                                <Feather
+                                    name="chevron-left"
+                                    size={20}
+                                    color="#fff"
+                                />
+                                <Text style={styles.buttonText}>Anterior</Text>
+                            </TouchableOpacity>
+
+                            <Text style={styles.pageText}>
+                                Página {page} de {totalPages}
+                            </Text>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.pageButton,
+                                    page >= totalPages && styles.disabledButton,
+                                ]}
+                                onPress={handleNextPage}
+                                disabled={page >= totalPages}
+                            >
+                                <Text style={styles.buttonText}>Próxima</Text>
+                                <Feather
+                                    name="chevron-right"
+                                    size={20}
+                                    color="#fff"
+                                />
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </>
             )}
         </View>
     );
@@ -272,7 +357,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     list: {
-        paddingBottom: 20,
+        paddingBottom: 12,
     },
     postCard: {
         flexDirection: 'row',
@@ -352,5 +437,31 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         alignItems: 'center',
         marginBottom: 16,
+    },
+    pagination: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#ddd',
+    },
+    pageButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        backgroundColor: '#2455a4',
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+    },
+    disabledButton: {
+        backgroundColor: '#aaa',
+    },
+    pageText: {
+        color: '#222',
+        fontWeight: 'bold',
+        fontSize: 14,
     },
 });

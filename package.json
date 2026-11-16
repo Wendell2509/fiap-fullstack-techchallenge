@@ -1,8 +1,8 @@
 {
-  "name": "fiap-postech-fase-2",
+  "name": "fiap-fullstack-techchallenge",
   "version": "1.0.0",
-  "description": "Backend REST em Node.js para uma plataforma de blogging educacional, com CRUD de postagens, busca, persistencia em banco de dados, Docker, CI/CD e testes automatizados.",
-  "main": "index.js",
+  "description": "Plataforma de blogging educacional desenvolvida para o Tech Challenge da Pós-Tech FIAP, com backend REST, banco de dados PostgreSQL, autenticação JWT e aplicativo mobile em React Native.",
+  "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
@@ -10,18 +10,27 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/andersonfc2/fiap-fullstack-techchallenge-fase2.git"
+    "url": "git+https://github.com/Wendell2509/fiap-fullstack-techchallenge.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "fiap",
+    "postech",
+    "tech-challenge",
+    "nodejs",
+    "express",
+    "react-native",
+    "postgresql"
+  ],
+  "author": "Wendell",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/andersonfc2/fiap-fullstack-techchallenge-fase2/issues"
+    "url": "https://github.com/Wendell2509/fiap-fullstack-techchallenge/issues"
   },
-  "homepage": "https://github.com/andersonfc2/fiap-fullstack-techchallenge-fase2#readme",
+  "homepage": "https://github.com/Wendell2509/fiap-fullstack-techchallenge#readme",
   "dependencies": {
     "@nestjs/swagger": "^11.4.5",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

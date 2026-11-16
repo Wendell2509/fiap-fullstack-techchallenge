@@ -1,65 +1,180 @@
-// IMPORTA CONEXAO COM O BANCO
+
 const { pool } = require('../config/database');
+const bcrypt = require('bcryptjs');
 
 class TeacherRepository {
 
-    // METODO PARA CADASTRAR UM PROFESSOR
+    // CADASTRAR PROFESSOR E CRIAR CONTA DE ACESSO
     async create({ name, email, department }) {
-        const queryText = `
-            INSERT INTO teachers(name, email, department)
-            VALUES($1, $2, $3)
-            RETURNING *;
-        `;
-        const values = [name, email, department];
-        const { rows } = await pool.query(queryText, values);
-        return rows[0];
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            const passwordHash = await bcrypt.hash('fiap2026', 10);
+
+            const userQuery = `
+                INSERT INTO users(name, email, password, role)
+                VALUES($1, $2, $3, $4)
+                RETURNING id;
+            `;
+
+            const userResult = await client.query(userQuery, [
+                name,
+                email,
+                passwordHash,
+                'teacher'
+            ]);
+
+            const userId = userResult.rows[0].id;
+
+            const teacherQuery = `
+                INSERT INTO teachers(user_id, name, email, department)
+                VALUES($1, $2, $3, $4)
+                RETURNING *;
+            `;
+
+            const teacherResult = await client.query(teacherQuery, [
+                userId,
+                name,
+                email,
+                department
+            ]);
+
+            await client.query('COMMIT');
+
+            return teacherResult.rows[0];
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
     }
 
-    // METODO PARA BUSCAR TODOS OS PROFESSORES (PAGINADO)
+    // BUSCAR TODOS OS PROFESSORES
     async findAll(limit = 10, offset = 0) {
         const queryText = `
-            SELECT * FROM teachers 
-            ORDER BY "createdAt" DESC 
+            SELECT * FROM teachers
+            ORDER BY "createdAt" DESC
             LIMIT $1 OFFSET $2;
         `;
+
         const { rows } = await pool.query(queryText, [limit, offset]);
         return rows;
     }
 
-    // METODO PARA CONTAR TOTAL DE PROFESSORES (PARA A PAGINACAO)
+    // CONTAR PROFESSORES
     async countAll() {
         const queryText = 'SELECT COUNT(*) FROM teachers;';
         const { rows } = await pool.query(queryText);
+
         return parseInt(rows[0].count, 10);
     }
 
-    // METODO DE BUSCA POR ID
+    // BUSCAR PROFESSOR POR ID
     async findById(id) {
-        const queryText = 'SELECT * FROM teachers WHERE id = $1;';
-        const { rows } = await pool.query(queryText, [id]);
-        return rows[0] || null;
-    }
-
-    // METODO PARA ATUALIZAR PROFESSOR
-    async update(id, { name, email, department }) {
         const queryText = `
-            UPDATE teachers
-            SET name = $1, email = $2, department = $3
-            WHERE id = $4
-            RETURNING *;
+            SELECT * FROM teachers
+            WHERE id = $1;
         `;
-        const values = [name, email, department, id];
-        const { rows } = await pool.query(queryText, values);
+
+        const { rows } = await pool.query(queryText, [id]);
         return rows[0] || null;
     }
 
-    // METODO PARA DELETAR POR ID
+    // ATUALIZAR PROFESSOR E SUA CONTA
+    async update(id, { name, email, department }) {
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            const teacherQuery = `
+                UPDATE teachers
+                SET name = $1, email = $2, department = $3
+                WHERE id = $4
+                RETURNING *;
+            `;
+
+            const teacherResult = await client.query(teacherQuery, [
+                name,
+                email,
+                department,
+                id
+            ]);
+
+            if (teacherResult.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return null;
+            }
+
+            const teacher = teacherResult.rows[0];
+
+            if (teacher.user_id) {
+                await client.query(
+                    `UPDATE users
+                     SET name = $1, email = $2
+                     WHERE id = $3;`,
+                    [name, email, teacher.user_id]
+                );
+            }
+
+            await client.query('COMMIT');
+
+            return teacher;
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    // EXCLUIR PROFESSOR E SUA CONTA DE ACESSO
     async delete(id) {
-        const queryText = 'DELETE FROM teachers WHERE id = $1 RETURNING *;';
-        const { rows } = await pool.query(queryText, [id]);
-        return rows.length > 0;
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            const result = await client.query(
+                'SELECT user_id FROM teachers WHERE id = $1;',
+                [id]
+            );
+
+            if (result.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return false;
+            }
+
+            const userId = result.rows[0].user_id;
+
+            if (userId) {
+                await client.query(
+                    'DELETE FROM users WHERE id = $1;',
+                    [userId]
+                );
+            } else {
+                await client.query(
+                    'DELETE FROM teachers WHERE id = $1;',
+                    [id]
+                );
+            }
+
+            await client.query('COMMIT');
+
+            return true;
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
     }
 }
 
-// INSTANCIA UNICA CONSUMIDA NO CONTROLLER
 module.exports = new TeacherRepository();

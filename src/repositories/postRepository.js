@@ -1,69 +1,128 @@
-//IMPORTA CONEXAO COM O BANCO
+
 const { pool } = require('../config/database');
 
 class PostRepository {
 
-    //METODO PARA SALVAR UM POST NO POSTGRESQL
+    // CRIAR POST
     async create({ title, content, author }) {
-        console.log("arg:", { title, content, author }); //debug
         const queryText = `
-            INSERT INTO posts(title,content,author)
-            VALUES($1,$2,$3)
-            RETURNING *;        
+            INSERT INTO posts(title, content, author)
+            VALUES($1, $2, $3)
+            RETURNING *;
         `;
+
         const values = [title, content, author];
         const { rows } = await pool.query(queryText, values);
+
         return rows[0];
     }
 
-    //METODO PARA BUSCAR TODOS ORDENADO POR DATA DE CRIACAO DECRESC
-    async findAll() {
-        const queryText = 'SELECT * FROM posts ORDER BY "createdAt" DESC;';
-        const { rows } = await pool.query(queryText);
+    // BUSCAR POSTS COM PAGINAÇÃO
+    async findAll(limit = 10, offset = 0) {
+        const queryText = `
+            SELECT *
+            FROM posts
+            ORDER BY "createdAt" DESC
+            LIMIT $1 OFFSET $2;
+        `;
+
+        const { rows } = await pool.query(queryText, [limit, offset]);
+
         return rows;
     }
 
-    //METODO PARA BUSCAR POR PALAVRA-CHAVE
-    async searchPosts(term) {
-        // ILIKE para busca case-insensitive
-        const query = `
-        SELECT * FROM posts 
-        WHERE title ILIKE $1 OR content ILIKE $1
-        ORDER BY "createdAt" DESC;
-      `;
-        // O % permite buscar o termo no início, meio ou fim da string
-        const searchTerm = `%${term}%`;
-        const result = await pool.query(query, [searchTerm]);
-        return result.rows;
+    // CONTAR TODOS OS POSTS
+    async countAll() {
+        const queryText = `
+            SELECT COUNT(*)
+            FROM posts;
+        `;
+
+        const { rows } = await pool.query(queryText);
+
+        return parseInt(rows[0].count, 10);
     }
 
-    //METODO DE BUSCA POR ID UNICO
+    // PESQUISAR POSTS COM PAGINAÇÃO
+    async searchPosts(term, limit = 10, offset = 0) {
+        const queryText = `
+            SELECT *
+            FROM posts
+            WHERE title ILIKE $1 OR content ILIKE $1
+            ORDER BY "createdAt" DESC
+            LIMIT $2 OFFSET $3;
+        `;
+
+        const searchTerm = `%${term}%`;
+
+        const { rows } = await pool.query(queryText, [
+            searchTerm,
+            limit,
+            offset
+        ]);
+
+        return rows;
+    }
+
+    // CONTAR RESULTADOS DA PESQUISA
+    async countSearch(term) {
+        const queryText = `
+            SELECT COUNT(*)
+            FROM posts
+            WHERE title ILIKE $1 OR content ILIKE $1;
+        `;
+
+        const searchTerm = `%${term}%`;
+
+        const { rows } = await pool.query(queryText, [searchTerm]);
+
+        return parseInt(rows[0].count, 10);
+    }
+
+    // BUSCAR POST POR ID
     async findById(id) {
-        const queryText = 'SELECT * FROM posts WHERE id = $1';
+        const queryText = `
+            SELECT *
+            FROM posts
+            WHERE id = $1;
+        `;
+
         const { rows } = await pool.query(queryText, [id]);
+
         return rows[0] || null;
     }
 
-    // METODO PARA ATUALIZAR
+    // ATUALIZAR POST
     async update(id, { title, content, author }) {
         const queryText = `
-        UPDATE posts
-         SET title = $1, content = $2, author = $3, "updatedAt" = CURRENT_TIMESTAMP
-         WHERE id = $4
-        RETURNING *;
+            UPDATE posts
+            SET
+                title = $1,
+                content = $2,
+                author = $3,
+                "updatedAt" = CURRENT_TIMESTAMP
+            WHERE id = $4
+            RETURNING *;
         `;
+
         const values = [title, content, author, id];
         const { rows } = await pool.query(queryText, values);
+
         return rows[0] || null;
     }
 
-    // METODO PARA DELETAR POR ID
+    // DELETAR POST
     async delete(id) {
-        const queryText = 'DELETE FROM posts WHERE id = $1 RETURNING *;';
+        const queryText = `
+            DELETE FROM posts
+            WHERE id = $1
+            RETURNING *;
+        `;
+
         const { rows } = await pool.query(queryText, [id]);
+
         return rows.length > 0;
     }
 }
 
-//INSTANCIA UNICA CONSUMIDA NO CONTROLLER
 module.exports = new PostRepository();

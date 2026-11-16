@@ -9,6 +9,7 @@ import {
     ActivityIndicator,
     StyleSheet,
     TouchableOpacity,
+    Alert,
 } from 'react-native';
 
 import { Feather } from '@expo/vector-icons';
@@ -22,19 +23,25 @@ export default function StudentsScreen() {
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [total, setTotal] = useState(0);
 
-    async function loadStudents() {
+    async function loadStudents(pageToLoad = page) {
         try {
             setLoading(true);
             setError('');
 
             const response = await apiRequest(
-                '/students?page=1&limit=10',
+                `/students?page=${pageToLoad}&limit=10`,
                 {},
                 token
             );
 
             setStudents(response.data);
+            setPage(response.meta.page);
+            setTotalPages(response.meta.totalPages);
+            setTotal(response.meta.total);
         } catch (err) {
             setError(err.message || 'Erro ao carregar alunos.');
         } finally {
@@ -44,9 +51,52 @@ export default function StudentsScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            loadStudents();
+            loadStudents(page);
         }, [token])
     );
+
+    function handleDeleteStudent(studentId, studentName) {
+        Alert.alert(
+            'Excluir Aluno',
+            `Tem certeza de que deseja excluir ${studentName}? Essa ação não poderá ser desfeita.`,
+            [
+                {
+                    text: 'Cancelar',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: () => confirmDelete(studentId),
+                },
+            ]
+        );
+    }
+
+    async function confirmDelete(studentId) {
+        try {
+            await apiRequest(
+                `/students/${studentId}`,
+                {
+                    method: 'DELETE',
+                },
+                token
+            );
+
+            Alert.alert('Sucesso', 'Aluno excluído com sucesso!');
+
+            const nextPage = students.length === 1 && page > 1
+                ? page - 1
+                : page;
+
+            loadStudents(nextPage);
+        } catch (err) {
+            Alert.alert(
+                'Erro',
+                err.message || 'Não foi possível excluir o aluno.'
+            );
+        }
+    }
 
     function renderStudent({ item }) {
         return (
@@ -63,16 +113,37 @@ export default function StudentsScreen() {
                     </Text>
                 </View>
 
-                <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={() =>
-                        navigation.navigate('EditStudent', {
-                            studentId: item.id,
-                        })
-                    }
-                >
-                    <Feather name="edit-2" size={20} color="#2455a4" />
-                </TouchableOpacity>
+                <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() =>
+                            navigation.navigate('EditStudent', {
+                                studentId: item.id,
+                            })
+                        }
+                        accessibilityLabel="Editar aluno"
+                    >
+                        <Feather
+                            name="edit-2"
+                            size={20}
+                            color="#2455a4"
+                        />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={() =>
+                            handleDeleteStudent(item.id, item.name)
+                        }
+                        accessibilityLabel="Excluir aluno"
+                    >
+                        <Feather
+                            name="trash-2"
+                            size={20}
+                            color="#d32f2f"
+                        />
+                    </TouchableOpacity>
+                </View>
             </View>
         );
     }
@@ -98,17 +169,63 @@ export default function StudentsScreen() {
             ) : error ? (
                 <Text style={styles.error}>{error}</Text>
             ) : (
-                <FlatList
-                    data={students}
-                    keyExtractor={(item) => String(item.id)}
-                    renderItem={renderStudent}
-                    contentContainerStyle={styles.list}
-                    ListEmptyComponent={
-                        <Text style={styles.empty}>
-                            Nenhum aluno encontrado.
-                        </Text>
-                    }
-                />
+                <>
+                    <FlatList
+                        data={students}
+                        keyExtractor={(item) => String(item.id)}
+                        renderItem={renderStudent}
+                        contentContainerStyle={styles.list}
+                        ListEmptyComponent={
+                            <Text style={styles.empty}>
+                                Nenhum aluno encontrado.
+                            </Text>
+                        }
+                    />
+
+                    {total > 0 && (
+                        <View style={styles.pagination}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.pageButton,
+                                    page <= 1 && styles.disabledButton,
+                                ]}
+                                disabled={page <= 1}
+                                onPress={() => loadStudents(page - 1)}
+                            >
+                                <Feather
+                                    name="chevron-left"
+                                    size={20}
+                                    color={page <= 1 ? '#999' : '#fff'}
+                                />
+                                <Text style={styles.pageButtonText}>
+                                    Anterior
+                                </Text>
+                            </TouchableOpacity>
+
+                            <Text style={styles.pageInfo}>
+                                Página {page} de {totalPages}
+                            </Text>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.pageButton,
+                                    page >= totalPages && styles.disabledButton,
+                                ]}
+                                disabled={page >= totalPages}
+                                onPress={() => loadStudents(page + 1)}
+                            >
+                                <Text style={styles.pageButtonText}>
+                                    Próxima
+                                </Text>
+                                <Feather
+                                    name="chevron-right"
+                                    size={20}
+                                    color={page >= totalPages ? '#999' : '#fff'}
+                                />
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </>
             )}
         </View>
     );
@@ -143,13 +260,13 @@ const styles = StyleSheet.create({
     },
     studentCard: {
         flexDirection: 'row',
+        alignItems: 'center',
         backgroundColor: '#fff',
         padding: 16,
         borderRadius: 8,
         marginBottom: 12,
         borderWidth: 1,
         borderColor: '#e5e5e5',
-        alignItems: 'center',
     },
     studentInfo: {
         flex: 1,
@@ -165,12 +282,56 @@ const styles = StyleSheet.create({
         color: '#555',
         marginBottom: 4,
     },
+    actionButtons: {
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 12,
+        gap: 12,
+    },
     editButton: {
         padding: 10,
-        marginLeft: 8,
+        backgroundColor: '#edf2fa',
+        borderRadius: 8,
+    },
+    deleteButton: {
+        padding: 10,
+        backgroundColor: '#fff0f0',
+        borderRadius: 8,
     },
     list: {
         paddingBottom: 20,
+        flexGrow: 1,
+    },
+    pagination: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#ddd',
+    },
+    pageButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#2455a4',
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        gap: 4,
+    },
+    disabledButton: {
+        backgroundColor: '#e0e0e0',
+    },
+    pageButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 13,
+    },
+    pageInfo: {
+        color: '#333',
+        fontSize: 14,
+        fontWeight: 'bold',
     },
     loader: {
         marginTop: 30,

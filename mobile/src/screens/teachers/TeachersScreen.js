@@ -23,19 +23,25 @@ export default function TeachersScreen() {
     const [teachers, setTeachers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [total, setTotal] = useState(0);
 
-    async function loadTeachers() {
+    async function loadTeachers(pageToLoad = page) {
         try {
             setLoading(true);
             setError('');
 
             const response = await apiRequest(
-                '/teachers?page=1&limit=10',
+                `/teachers?page=${pageToLoad}&limit=10`,
                 {},
                 token
             );
 
             setTeachers(response.data);
+            setPage(response.meta.page);
+            setTotalPages(response.meta.totalPages);
+            setTotal(response.meta.total);
         } catch (err) {
             setError(err.message || 'Erro ao carregar professores.');
         } finally {
@@ -45,7 +51,7 @@ export default function TeachersScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            loadTeachers();
+            loadTeachers(page);
         }, [token])
     );
 
@@ -79,7 +85,11 @@ export default function TeachersScreen() {
 
             Alert.alert('Sucesso', 'Professor excluído com sucesso!');
 
-            loadTeachers();
+            const nextPage = teachers.length === 1 && page > 1
+                ? page - 1
+                : page;
+
+            loadTeachers(nextPage);
         } catch (err) {
             Alert.alert(
                 'Erro',
@@ -147,17 +157,63 @@ export default function TeachersScreen() {
             ) : error ? (
                 <Text style={styles.error}>{error}</Text>
             ) : (
-                <FlatList
-                    data={teachers}
-                    keyExtractor={(item) => String(item.id)}
-                    renderItem={renderTeacher}
-                    contentContainerStyle={styles.list}
-                    ListEmptyComponent={
-                        <Text style={styles.empty}>
-                            Nenhum professor encontrado.
-                        </Text>
-                    }
-                />
+                <>
+                    <FlatList
+                        data={teachers}
+                        keyExtractor={(item) => String(item.id)}
+                        renderItem={renderTeacher}
+                        contentContainerStyle={styles.list}
+                        ListEmptyComponent={
+                            <Text style={styles.empty}>
+                                Nenhum professor encontrado.
+                            </Text>
+                        }
+                    />
+
+                    {total > 0 && (
+                        <View style={styles.pagination}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.pageButton,
+                                    page <= 1 && styles.disabledButton,
+                                ]}
+                                disabled={page <= 1}
+                                onPress={() => loadTeachers(page - 1)}
+                            >
+                                <Feather
+                                    name="chevron-left"
+                                    size={20}
+                                    color={page <= 1 ? '#999' : '#fff'}
+                                />
+                                <Text style={styles.pageButtonText}>
+                                    Anterior
+                                </Text>
+                            </TouchableOpacity>
+
+                            <Text style={styles.pageInfo}>
+                                Página {page} de {totalPages}
+                            </Text>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.pageButton,
+                                    page >= totalPages && styles.disabledButton,
+                                ]}
+                                disabled={page >= totalPages}
+                                onPress={() => loadTeachers(page + 1)}
+                            >
+                                <Text style={styles.pageButtonText}>
+                                    Próxima
+                                </Text>
+                                <Feather
+                                    name="chevron-right"
+                                    size={20}
+                                    color={page >= totalPages ? '#999' : '#fff'}
+                                />
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </>
             )}
         </View>
     );
@@ -233,6 +289,37 @@ const styles = StyleSheet.create({
     },
     list: {
         paddingBottom: 20,
+        flexGrow: 1,
+    },
+    pagination: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#ddd',
+    },
+    pageButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#2455a4',
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        gap: 4,
+    },
+    disabledButton: {
+        backgroundColor: '#e0e0e0',
+    },
+    pageButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 13,
+    },
+    pageInfo: {
+        color: '#333',
+        fontSize: 14,
+        fontWeight: 'bold',
     },
     loader: {
         marginTop: 30,
