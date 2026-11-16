@@ -1,55 +1,246 @@
-# FIAP Pos-Tech - Fase 3 - Tech Challenge
+# FIAP Pós-Tech – Tech Challenge – Fase 4
 
-Aplicação **Full Stack** (Blogging Educacional) desenvolvida para o Tech Challenge da Fase 3 da Pós-Tech FIAP. O projeto integra um back-end estruturado em camadas com Node.js/Express, persistência em PostgreSQL, container via Docker e um front-end em React.
+Aplicação full stack de blogging educacional desenvolvida como parte do Tech Challenge da Pós-Tech FIAP.
+
+O projeto integra uma API REST desenvolvida em Node.js e Express, banco de dados PostgreSQL, aplicação web em React e aplicativo mobile em React Native.
 
 ## Sobre o projeto
 
-O sistema permite que docentes realizem a autenticação na plataforma, gerenciem postagens (criação, edição, remoção e listagem) e utilizem ferramentas de busca, enquanto alunos e visitantes consultam os conteúdos publicados de forma integrada e responsiva.
+A plataforma permite o gerenciamento de publicações educacionais, professores e alunos, com autenticação e controle de permissões por perfil de usuário.
 
-## Tecnologias previstas
+Professores autenticados podem criar, visualizar, editar e excluir publicações, além de gerenciar professores e alunos. Alunos podem acessar e consultar as publicações, sem permissão para modificá-las.
 
-- **Front-end:** React, Vite, React Router DOM, Axios
-- **Back-end:** Node.js, Express, Cors, Dotenv
-- **Banco de Dados:** PostgreSQL
-- **DevOps:** Docker & Docker Compose
-- **Qualidade & Testes:** Testes automatizados e rotas de Health Check
+A aplicação mobile consome os mesmos serviços REST disponibilizados pelo backend.
 
-## Instruções
-1. Instalar os programas necessarios (comandos para verificar)
-    * git --version
-    * node -v
-    * npm -v
-    * docker --version
-    * docker compose version
+## Funcionalidades
 
-2. Clonar o repositório
-    * git clone https://github.com/Wendell2509/fiap-fullstack-techchallenge-fase3.git
-  
-3.  Entrar na pasta do projeto
-    * cd fiap-fullstack-techchallenge-fase3
+### Publicações
+- Listagem de publicações.
+- Busca por publicações.
+- Visualização detalhada.
+- Criação, edição e exclusão de publicações por professores.
+- Paginação dos resultados.
 
-4. Instalar dependencias
-    *  npm install
+### Autenticação e autorização
+- Login com e-mail e senha.
+- Autenticação utilizando JWT.
+- Persistência segura da sessão no aplicativo mobile.
+- Controle de acesso conforme o perfil do usuário.
+- Proteção das rotas que exigem autenticação.
 
-5. Verificar o arquivo .env ou cria-lo
-    * Dentro do projeto que possui os logins e senhas para acessar o projeto/database
+### Professores
+- Cadastro de professores.
+- Listagem paginada.
+- Edição e exclusão de registros.
 
-6. Abrir o Docker Desktop
-    * Abrir o Docker Desktop pelo menu iniciar e esperar ficar rodando
-    
+### Alunos
+- Cadastro de alunos.
+- Listagem paginada.
+- Edição e exclusão de registros.
 
-7. Subir os containers da API e do PostgreSQL (executar comando dentro da pasta raiz)
-    * docker compose up --build
-    * * é possível verificar o container executando o comando abaixo dentro da pasta raiz
-      * docker ps 
+## Tecnologias utilizadas
 
-8. Subir aplicação web (dentro da pasta front-end executar)
-    * npm run dev
+| Camada | Tecnologias |
+|---|---|
+| Front-end Web | React, Vite, React Router DOM, Axios |
+| Aplicativo Mobile | React Native, Expo |
+| Navegação Mobile | React Navigation |
+| Autenticação Mobile | JWT, Expo SecureStore |
+| Back-end | Node.js, Express |
+| Banco de Dados | PostgreSQL |
+| Infraestrutura | Docker e Docker Compose |
+| Comunicação | API REST, JSON |
 
-9. Acessar a aplicação web:
+## Estrutura do projeto
 
-    *    Front-end (Aplicação Web): http://localhost:5173
-    *    Status do Banco de Dados: http://localhost:3000/database/health
-10. Credencias de acesso
-    * professor@fiap.com
-    * 123456
+```text
+fiap-fullstack-techchallenge/
+│
+├── .github/
+│   └── workflows/
+│
+├── frontend/
+│   └── Aplicação web em React
+│
+├── mobile/
+│   └── Aplicativo mobile em React Native
+│
+├── src/
+│   ├── config/
+│   ├── controllers/
+│   ├── middlewares/
+│   ├── repositories/
+│   ├── routes/
+│   └── server.js
+│
+├── .env.example
+├── Dockerfile
+├── docker-compose.yml
+├── package.json
+└── README.md
+```
+
+## Requisitos para execução
+
+Antes de iniciar, é necessário ter instalado:
+
+- Node.js e npm.
+- Git.
+- Docker Desktop.
+- Docker Compose.
+- Expo Go para executar o aplicativo mobile em um dispositivo físico.
+
+## Configuração do ambiente
+
+Clone o repositório:
+
+```bash
+git clone https://github.com/Wendell2509/fiap-fullstack-techchallenge.git
+```
+
+Entre na pasta do projeto:
+
+```bash
+cd fiap-fullstack-techchallenge
+```
+
+Crie o arquivo `.env` a partir do modelo:
+
+```bash
+cp .env.example .env
+```
+
+No Windows PowerShell, também é possível utilizar:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Configure as variáveis necessárias para a API e para o PostgreSQL:
+
+```env
+PORT=3000
+DB_HOST=fiap-db
+DB_PORT=5432
+DB_NAME=fiap_blog
+DB_USER=fiap_user
+DB_PASSWORD=sua_senha
+
+JWT_SECRET=sua_chave_secreta
+
+POSTGRES_DB=fiap_blog
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=sua_senha
+```
+
+DB_USER e DB_PASSWORD são as credenciais utilizadas pelo backend para acessar o banco de dados. POSTGRES_USER e POSTGRES_PASSWORD configuram o usuário inicial do container PostgreSQL. Essas credenciais podem ser diferentes, desde que o usuário utilizado pelo backend exista no banco e tenha as permissões necessárias.
+
+## Executando o back-end
+
+Na pasta raiz do projeto, com o Docker Desktop aberto, execute:
+
+```bash
+docker compose --env-file .env up -d --build
+```
+
+Para verificar os containers:
+
+```bash
+docker compose ps
+```
+
+A API estará disponível em:
+
+```text
+http://localhost:3000
+```
+
+Rotas de verificação:
+
+- API: `http://localhost:3000/health`
+- Banco de dados: `http://localhost:3000/database/health`
+
+## Executando o front-end web
+
+Entre na pasta do front-end:
+
+```bash
+cd frontend
+```
+
+Instale as dependências:
+
+```bash
+npm install
+```
+
+Inicie a aplicação:
+
+```bash
+npm run dev
+```
+
+A aplicação web estará disponível no endereço informado pelo Vite, normalmente:
+
+```text
+http://localhost:5173
+```
+
+## Executando o aplicativo mobile
+
+Entre na pasta do aplicativo:
+
+```bash
+cd mobile
+```
+
+Instale as dependências:
+
+```bash
+npm install
+```
+
+Inicie o Expo:
+
+```bash
+npx expo start
+```
+
+Com o Expo iniciado, utilize o Expo Go para executar o aplicativo em um dispositivo compatível.
+
+Para execução em dispositivo Android conectado via USB, pode ser necessário configurar o redirecionamento das portas com ADB:
+
+```bash
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:3000 tcp:3000
+```
+
+Depois, inicie o Expo com:
+
+```bash
+npx expo start --localhost
+```
+
+## Autenticação e permissões
+
+A plataforma utiliza autenticação baseada em JWT.
+
+As permissões são divididas conforme o perfil:
+
+**Professor**
+- Criar, editar e excluir publicações.
+- Consultar publicações.
+- Gerenciar professores.
+- Gerenciar alunos.
+
+**Aluno**
+- Consultar publicações.
+- Não possui permissão para criar, editar ou excluir publicações.
+
+As rotas protegidas validam o token de autenticação e o perfil do usuário antes de permitir operações restritas.
+
+## Banco de dados
+
+O projeto utiliza PostgreSQL como sistema de gerenciamento de banco de dados.
+
+O banco é executado em um container Docker, com persistência dos dados por meio de volume.
