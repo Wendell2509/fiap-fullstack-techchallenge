@@ -28,6 +28,12 @@ A aplicação mobile consome os mesmos serviços REST disponibilizados pelo back
 - Controle de acesso conforme o perfil do usuário.
 - Proteção das rotas que exigem autenticação.
 
+### Admin account
+- usuário admin
+- login: admin@fiap.com.br
+- senha: 123456
+- Os demais usuários criados a partir do admin vão ter a senha padrão: fiap2026
+
 ### Professores
 - Cadastro de professores.
 - Listagem paginada.
